@@ -1,0 +1,124 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login</title>
+
+    <!--    BootStrap Library-->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+          integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"
+            integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN"
+            crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"
+            integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
+            crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"
+            integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
+            crossorigin="anonymous"></script>
+
+    <!--    JQuery-->
+    <script src="https://code.jquery.com/jquery-3.5.1.js"></script>
+
+    <!--    Javascript-->
+    <script src="/htmlApi.js"></script>
+
+
+
+</head>
+<script>
+
+
+    $(document).ready(function () {
+        if (localStorage.getItem("token")) {
+            getSelf(function () {
+                $('#btn_login').hide()
+                $('#btn_logout').show()
+            })
+        } else {
+            $('#btn_post').hide()
+        }
+        getPosts();
+    });
+
+    function getPosts() {
+        $.ajax({
+            type: "GET",
+            url: "/api/posts",
+            data: {},
+            success: function (response) {
+                let posts = response;
+                for (let i = 0; i < posts.length; i++) {
+                    make_tr(posts[i]);
+                }
+            },
+            error: function (error) {
+                console.log(error.responseJSON.errorMessage);
+            },
+        });
+    }
+
+    function make_tr(post) {
+        const {postId, nickname, title} = post;
+        const temp_html = `<tr>
+                <th scope="row">${postId}</th>
+                <td><a href="/posts.html?postId=${postId}">${title}</a></td>
+                <td>${nickname}</td>
+            </tr>`
+        $('#table_body').append(temp_html);
+    }
+
+    function redirectSign() {
+        location.href = "sign.html";
+    }
+
+    function redirectWrite() {
+        location.href = "/write.html"
+    }
+
+    function redirectLogin() {
+        location.href = "/login.html"
+    }
+
+    function logout() {
+        localStorage.clear();
+        window.location.href = '/';
+    }
+
+</script>
+<body>
+
+<div>
+
+    <div class="post-body">
+        <table class="table">
+            <thead class="thead-light">
+            <colgroup>
+                <col style="width:10%"/>
+                <col style="width:15%"/>
+                <col style="width:75%"/>
+            </colgroup>
+            <tr>
+                <th scope="col">#</th>
+                <th scope="col">제목</th>
+                <th scope="col">작성자</th>
+            </tr>
+            </thead>
+            <tbody id="table_body">
+
+
+            </tbody>
+        </table>
+        <button id="btn_post" type="button" class="btn btn-dark" onclick="redirectWrite()">게시글 작성</button>
+        <button id="btn_login" type="button" class="btn btn-dark" onclick="redirectLogin()">로그인</button>
+        <button id="btn_logout" type="button" class="btn btn-dark" onclick="logout()" style="display: none">로그아웃
+        </button>
+    </div>
+
+
+</div>
+
+
+</body>
+</html>

@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Login</title>
+
+    <!--    BootStrap Library-->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+        integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"
+        integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN"
+        crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"
+        integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
+        crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"
+        integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
+        crossorigin="anonymous"></script>
+
+    <!-- Font Awesome CSS -->
+    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
+
+    <!--    JQuery-->
+    <script src="https://code.jquery.com/jquery-3.5.1.js"></script>
+
+    <!--    Javascript-->
+    <script src="/htmlApi.js"></script>
+
+
+</head>
+<style>
+
+</style>
+<script>
+    const queryString = window.location.search;
+    const urlParams = new URLSearchParams(queryString);
+    const postId = urlParams.get("postId");
+
+    let userId;
+    $(document).ready(function () {
+        if (localStorage.getItem("token")) {
+            getSelf(function (user) {
+                userId = user.userId;
+                getPosts();
+            })
+            getComments();
+        } else {
+            getPosts();
+            getComments_untoken()
+        }
+    });
+
+    function getPosts() {
+        $.ajax({
+            type: "GET",
+            url: `/api/posts/${postId}`,
+            data: {},
+            success: function (response) {
+                let posts = response;
+                $('#title').val(posts["title"])
+                $('#content').val(posts["content"])
+                if (Number(posts["userId"]) === Number(userId)) {
+                    const temp_html = `<button id="btnModify${userId}" type="button" class="btn btn-primary" onclick="modifyPost()">수정하기</button>`
+                    $('#setModify').append(temp_html)
+                    $("#btnModify").attr('id', 'btnModify' + userId);
+                }
+            }
+        });
+    }
+
+    //해당 게시글의 모든 Comments를 조회
+
+    function getComments() {
+        const token = localStorage.getItem("token");
+        $('#comment_body').empty();
+
+        $.ajax({
+            type: "GET",
+            url: `/api/comments/${postId}`,
+            headers: {
+                authorization: `Bearer ${token}`,
+            },
+            data: { token },
+            success: function (response) {
+                let comments = response;
+                const tokenUserId = userId; 
+                for (let i = comments.length - 1; i >= 0; i--) {
+                    if (comments[i]['postId'] === Number(postId)) {
+                        makeComment(comments[i], tokenUserId)
+                    }
+                }
+            },
+            error: function (error) {
+                console.error(error.responseJSON.errorMessage);
+            },
+        });
+    }
+
+    //해당 게시글의 모든 Comments를 조회
+    function getComments_untoken() {
+        $('#comment_body').empty();
+        $.ajax({
+            type: "GET",
+            url: `/api/comment/${postId}`,
+            data: {},
+            success: function (response) {
+                let comments = response;
+                for (let i = comments.length - 1; i >= 0; i--) {
+                    if (comments[i]['postId'] === Number(postId)) {
+                        makeComment(comments[i], 0)
+                    }
+                }
+            },
+            error: function (error) {
+                console.error(error.responseJSON.errorMessage);
+            },
+        });
+    }
+
+    function modifyCommentShow(commentId) {
+        $(`#comment${commentId}`).hide()
+        $(`#commentIcon${commentId}`).hide()
+
+        $(`#commentDiv${commentId}`).show()
+
+        const commentText = $(`#comment${commentId}`).text().trim();
+        $(`#commentInput${commentId}`).val(commentText)
+    }
+
+    function modifyCommentHide(commentId) {
+        $(`#comment${commentId}`).show()
+        $(`#commentIcon${commentId}`).show()
+
+        $(`#commentDiv${commentId}`).hide()
+    }
+
+    //댓글 수정
+    function modifyComment(commentId) {
+        const comment = $(`#commentInput${commentId}`).val()
+        if (!comment) {
+            alert("댓글이 존재하지 않습니다!")
+            return;
+        }
+
+        $.ajax({
+            type: "PATCH",
+            url: `/api/comments/${commentId}`,
+            headers: {
+                authorization: `Bearer ${localStorage.getItem('token')}`,
+            },
+            data: { comment },
+            success: function (response) {
+                console.log(response);
+            },
+            error: function (error) {
+                console.error(error.responseJSON.errorMessage);
+            },
+        });
+
+        $(`#comment${commentId}`).text(comment)
+        modifyCommentHide(commentId)
+    }
+
+    // 댓글 삭제
+    function deleteComment(commentId) {
+        if (confirm("댓글을 삭제하시겠습니까?")) {
+            $.ajax({
+                type: "DELETE",
+                url: `/api/comments/${commentId}`,
+                headers: {
+                    authorization: `Bearer ${localStorage.getItem("token")}`
+                },
+                data: {},
+                success: function (response) {
+                    $(`#commentBody${commentId}`).hide()
+                },
+                error: function (error) {
+                    console.error(error.responseJSON.errorMessage);
+                    alert(error.responseJSON.errorMessage)
+                },
+            });
+        }
+
+    }
+
+    function makeComment(commentObject, tokenUserId) {
+        const { commentId, nickname, comment, userId } = commentObject;
+        if (userId == tokenUserId) {
+            const temp_html = `
+            <tr id="commentBody${commentId}">
+                <td scope="col">${nickname}</td>
+                <td scope="col" id="comment${commentId}">${comment}
+                </td>
+                <td id="commentIcon${commentId}">
+                    <i class="fa fa-pencil" aria-hidden="true" onclick="modifyCommentShow(${commentId})"></i>
+                    <i class="fa fa-times" aria-hidden="true" onclick="deleteComment(${commentId})"></i>
+                </td>
+                <td colspan="2">
+                <div id="commentDiv${commentId}" class="input-group mb-3" style="display: none">
+                  <input id="commentInput${commentId}" type="text" class="form-control" aria-label="Recipient's username" aria-describedby="basic-addon2">
+                  <div class="input-group-append">
+                    <button class="btn btn-outline-secondary" type="button" onclick="modifyComment(${commentId})">저장</button>
+                  </div>
+                </div>
+                </td>
+            </tr>`
+            $('#commentTableBody').append(temp_html)
+
+        } else { 
+            const temp_html = `<tr>
+                <td scope="col">${nickname}</td>
+                <td scope="col">${comment}</td>
+                <td></td>
+            </tr>`
+            $('#commentTableBody').append(temp_html)
+        }
+    }
+
+    // 댓글 작성
+    function writeComment() {
+        const comment = $('#comment').val()
+
+        if (!comment) {
+            alert("댓글 내용을 입력 해주세요.")
+            return;
+        }
+        $.ajax({
+            type: "POST",
+            url: `/api/comments/${postId}`,
+            headers: {
+                authorization: `Bearer ${localStorage.getItem('token')}`,
+            },
+            data: { comment },
+            success: function (response) { 
+                location.href = location.href
+                history.go(0);
+            },
+            error: function (error) {
+                alert(error.responseJSON.errorMessage)
+            },
+        });
+    }
+
+    function loginCheck() {
+        if (!localStorage.getItem("token")) {
+            alert("로그인이 필요한 기능입니다.")
+            location.href = "/login.html"
+        }
+    }
+
+    function modifyPost() {
+        location.href = `/modify.html?postId=${postId}`
+    }
+
+</script>
+
+<body>
+
+    <div>
+
+
+        <div class="post-body">
+
+
+            <label for="alert_title">제목</label>
+
+            <input class="form-control" type="text" id="title" disabled>
+
+
+            <div class="form-group">
+                <label for="content">내용</label>
+                <textarea class="form-control" id="content" rows="10" disabled>1</textarea>
+            </div>
+
+            <table class="table">
+                <thead class="thead-light">
+                    <colgroup>
+                        <col style="width:10%" />
+                        <col style="width:80%" />
+                        <col style="width:10%" />
+                    </colgroup>
+                </thead>
+
+
+                <tbody id="commentTableBody">
+
+                </tbody>
+            </table>
+
+            <div>
+                <div class="input-group mb-3" id="commentWriteBody">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text" id="basic-addon1">댓글</span>
+                    </div>
+                    <input type="text" class="form-control" aria-label="Username" aria-describedby="basic-addon1"
+                        id="comment" onclick="loginCheck()">
+                    <button type="button" class="btn btn-primary" onclick="writeComment()">등록하기</button>
+                </div>
+            </div>
+
+            <div id="setModify">
+
+                <button type="button" class="btn btn-secondary" onclick="location.href='/'">취소</button>
+            </div>
+
+        </div>
+    </div>
+
+</body>
+
+</html>

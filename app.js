@@ -7,9 +7,11 @@ const Posts = require('./schemas/posts');
 const Comments = require('./schemas/comments');
 const authMiddleware = require('./middlewares/auth-middleware');
 
-mongoose.connect('mongodb://localhost/post', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
+mongoose.connect('mongodb://test:test@localhost:27017/admin', {
+  dbName:'dbtest',
+  // useNewUrlParser: true,
+  // useUnifiedTopology: true,
+  ignoreUndefined: true,
 });
 const db = mongoose.connection;
 db.on('error', console.error.bind(console, 'connection error:'));
